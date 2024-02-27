@@ -100,6 +100,7 @@ class mixed:
             uni_dic_tfidf (dict): Dictionary with keys: genres, values: dictionary A. In A, keys: words, values: TF-IDF scores
 
         Returns:
+            best_lambda (float): lambda value that provides best mixed model results
         """
         most_correct_predictions = 0
         best_lambda = 0
@@ -365,7 +366,27 @@ class f1_score_calc:
         return weighted_f1
     
 class evaluator:
+    """
+    A class to evaluate f1 and significance
+
+    Provides a method to evaluate f1 scores of a model and another method to determine the significance of the results
+    """
     def evaluate_f1(self, file_in, uni_dic_tfidf, bi_dic_tfidf, best_lambda):
+        """
+        Determines the f1 score of each model
+
+        Args:
+            file_in (str): direct path of test file
+
+            uni_dic_tfidf (dict): keys: genres values: combined TF-IDF scores for the genres
+
+            bi_dic_tfidf (dict): keys: genres values: combined TF-IDF scores for the genres
+
+            best_lambda (float): lambda value that provides best mixed model results
+
+        Returns:
+            uni_f1, bi_f1, mixed_f1 (float): f1 scores of each model
+        """
         with open(file_in, 'r') as file:
             next(file) # skip header
             uni_predictions = []
@@ -387,7 +408,17 @@ class evaluator:
         return uni_f1, bi_f1, mixed_f1
     
     def evaluate_significance(self, unigram_scores, bigram_scores, mixed_scores):
+        """
+        Calculates significance of the results from each model and prints them
 
+        Args:
+            unigram_scores (list): list of unigram f1 scores for each run
+
+            bigram_scores (list): list of bigram f1 scores for each run
+
+            mixed_scores (list): list of mixed f1 scores for each run
+        
+        """
         # Calculate differences between pairs of F1 scores
         diff_unigram_bigram = [unigram_scores[i] - bigram_scores[i] for i in range(len(unigram_scores))]
         diff_unigram_mixed = [unigram_scores[i] - mixed_scores[i] for i in range(len(unigram_scores))]
@@ -447,8 +478,9 @@ def main():
     mixed_scores.append(t1_mixed_f1)
     mixed_scores.append(t2_mixed_f1)
 
+    # prints f1 scores
     print("Unigram f1 scores = ", unigram_scores[0], ",", unigram_scores[1], " Bigram f1 scores = ", bigram_scores[0], ",", bigram_scores[1], " Mixed f1 scores = ", mixed_scores[0], ",", mixed_scores[1])
-
+    
     evaluator1.evaluate_significance(unigram_scores, bigram_scores, mixed_scores)
 
 main()
