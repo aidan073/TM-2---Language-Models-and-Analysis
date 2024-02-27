@@ -4,6 +4,7 @@ import re
 import copy
 from sklearn.metrics import f1_score
 from nltk.tokenize import word_tokenize
+from scipy import stats
 
 class unigram:
     """
@@ -362,6 +363,46 @@ class f1_score_calc:
         weighted_f1 = f1_score(true_labels_numerical, predicted_labels_numerical, average='weighted') # Calculate weighted average F1 score
 
         return weighted_f1
+    
+class evaluator:
+    def evaluate_f1(self, file_in, uni_dic_tfidf, bi_dic_tfidf, best_lambda):
+        with open(file_in, 'r') as file:
+            next(file) # skip header
+            uni_predictions = []
+            bi_predictions = []
+            mixed_predictions = []
+            true_labels = []
+
+            for line in file:
+                sections = line.strip().split('\t') # get list with text and genre separated
+                uni_predictions.append(tester.classify_unigram(uni_dic_tfidf, sections[1], False))
+                bi_predictions.append(tester.classify_bigram(bi_dic_tfidf, sections[1], False))
+                mixed_predictions.append(tester.classify_mixed(sections[1], best_lambda, uni_dic_tfidf, bi_dic_tfidf))
+                true_labels.append(sections[2])
+
+            uni_f1 = f1_score_calc.calculate_f1(uni_predictions, true_labels)
+            bi_f1 = f1_score_calc.calculate_f1(bi_predictions, true_labels)
+            mixed_f1 = f1_score_calc.calculate_f1(mixed_predictions, true_labels)
+        
+        return uni_f1, bi_f1, mixed_f1
+    
+    def evaluate_significance(self, unigram_scores, bigram_scores, mixed_scores):
+
+        # Calculate differences between pairs of F1 scores
+        diff_unigram_bigram = [unigram_scores[i] - bigram_scores[i] for i in range(len(unigram_scores))]
+        diff_unigram_mixed = [unigram_scores[i] - mixed_scores[i] for i in range(len(unigram_scores))]
+        diff_bigram_mixed = [bigram_scores[i] - mixed_scores[i] for i in range(len(bigram_scores))]
+
+        # Perform paired t-tests
+        t_stat_unigram_bigram, p_value_unigram_bigram = stats.ttest_rel(diff_unigram_bigram, [0] * len(diff_unigram_bigram))
+        t_stat_unigram_mixed, p_value_unigram_mixed = stats.ttest_rel(diff_unigram_mixed, [0] * len(diff_unigram_mixed))
+        t_stat_bigram_mixed, p_value_bigram_mixed = stats.ttest_rel(diff_bigram_mixed, [0] * len(diff_bigram_mixed))
+
+        # Print results
+        print("Paired t-test results:")
+        print("Unigram vs. Bigram: t-statistic =", t_stat_unigram_bigram, " p-value =", p_value_unigram_bigram)
+        print("Unigram vs. Mixed: t-statistic =", t_stat_unigram_mixed, " p-value =", p_value_unigram_mixed)
+        print("Bigram vs. Mixed: t-statistic =", t_stat_bigram_mixed, " p-value =", p_value_bigram_mixed)
 
 
 def main():
@@ -372,6 +413,7 @@ def main():
     bigram_model = bigram()
     tf_idf_calculations = tf_idf_calc()
     mixed_model = mixed()
+    evaluator1 = evaluator()
 
     # get token counts in genres
     dic_genre_pair_count = bigram_model.read_files("Lyrics")
@@ -390,26 +432,23 @@ def main():
     # set lambdas
     best_lambda = mixed_model.set_lambda(uni_dic_tfidf, bi_dic_tfidf, "Validation Set")
 
-    # calculate f1 scores for uni, bi, mixed on test.tsv
-    with open('test.tsv', 'r') as file:
-        next(file) # skip header
-        uni_predictions = []
-        bi_predictions = []
-        mixed_predictions = []
-        true_labels = []
+    # evaluate models
+    unigram_scores = []
+    bigram_scores = []
+    mixed_scores = []
 
-        for line in file:
-            sections = line.strip().split('\t') # get list with text and genre separated
-            uni_predictions.append(tester.classify_unigram(uni_dic_tfidf, sections[1], False))
-            bi_predictions.append(tester.classify_bigram(bi_dic_tfidf, sections[1], False))
-            mixed_predictions.append(tester.classify_mixed(sections[1], best_lambda, uni_dic_tfidf, bi_dic_tfidf))
-            true_labels.append(sections[2])
+    t1_uni_f1, t1_bi_f1, t1_mixed_f1 = evaluator1.evaluate_f1("C:\\Users\\Gigabyte\\Desktop\\Text Mining\\assignment2\\test.tsv", uni_dic_tfidf, bi_dic_tfidf, best_lambda)
+    t2_uni_f1, t2_bi_f1, t2_mixed_f1 = evaluator1.evaluate_f1("C:\\Users\\Gigabyte\\Desktop\\Text Mining\\assignment2\\test2.tsv", uni_dic_tfidf, bi_dic_tfidf, best_lambda)
 
-        uni_f1 = f1_score_calc.calculate_f1(uni_predictions, true_labels)
-        bi_f1 = f1_score_calc.calculate_f1(bi_predictions, true_labels)
-        mixed_f1 = f1_score_calc.calculate_f1(mixed_predictions, true_labels)
-        pass
+    unigram_scores.append(t1_uni_f1)
+    unigram_scores.append(t2_uni_f1)
+    bigram_scores.append(t1_bi_f1)
+    bigram_scores.append(t2_bi_f1)
+    mixed_scores.append(t1_mixed_f1)
+    mixed_scores.append(t2_mixed_f1)
 
+    print("Unigram f1 scores = ", unigram_scores[0], ",", unigram_scores[1], " Bigram f1 scores = ", bigram_scores[0], ",", bigram_scores[1], " Mixed f1 scores = ", mixed_scores[0], ",", mixed_scores[1])
 
+    evaluator1.evaluate_significance(unigram_scores, bigram_scores, mixed_scores)
 
 main()
