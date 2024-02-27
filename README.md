@@ -3,7 +3,7 @@ Uses three different language model approaches to attempt to classify the genre 
 
 How to run:
 You will need to have the assignment2.py file located in a folder with the training set, the validation set, and the two test sets.
-The validation set is in a rar file and will have to be extracted to the folder.
+The training set is in a rar file (Lyrics.rar) and will have to be extracted to the folder.
 The whole folder should be opened in your IDE when running the code.
 Lines 470 and 471 contain file paths that lead to the two test sets in the folder. These should be the only two lines you have to change
 to get the code running properly.
